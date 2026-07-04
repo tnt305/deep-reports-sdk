@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 
 class TestBuildGraph:
@@ -120,7 +119,6 @@ class TestMakeAgentFnLogic:
 
     def test_refiner_increments_iteration(self):
         """Simulate: refiner agent fn increments iteration."""
-        from deep_reports.deep_report import MAX_REFINER_ITERATIONS
 
         state = {"iteration": 1}
         new_state = dict(state)

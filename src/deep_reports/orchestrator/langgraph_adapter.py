@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from deep_reports.orchestrator.base import Orchestrator, PipelineState
+
 logger = logging.getLogger("deep_reports.orchestrator.langgraph")
 
 
-class LangGraphOrchestrator:
+class LangGraphOrchestrator(Orchestrator):
     """
     LangGraph StateGraph wrapper conforming to Orchestrator Protocol.
 
@@ -45,16 +47,19 @@ class LangGraphOrchestrator:
             self._graph = StateGraph(dict)
         return self._graph
 
-    def run(self, initial: dict, *, max_iterations: int = 5) -> dict:
+    def run(
+        self,
+        initial: PipelineState,
+        *,
+        max_iterations: int = 5,
+    ) -> PipelineState:
         from langgraph.graph import END
 
         graph = self._get_graph()
 
-        # Add all registered nodes
         for name, fn in self._nodes.items():
             graph.add_node(name, fn)
 
-        # Resolve pending conditionals against complete node set
         for src, router, path_map in self._pending_conditionals:
             resolved = {
                 k: (v if v in self._nodes else END)
@@ -64,4 +69,5 @@ class LangGraphOrchestrator:
 
         self._pending_conditionals.clear()
         compiled = graph.compile()
-        return compiled.invoke(dict(initial), {"recursion_limit": max_iterations * 5})
+        result = compiled.invoke(dict(initial), {"recursion_limit": max_iterations * 5})
+        return PipelineState(**result)  # type: ignore

@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from deep_reports.orchestrator.base import Orchestrator, PipelineState
+
 logger = logging.getLogger("deep_reports.orchestrator.crewai")
 
 
-class CrewAIOrchestrator:
+class CrewAIOrchestrator(Orchestrator):
     """
     CrewAI Crew wrapper conforming to Orchestrator Protocol.
 
@@ -39,7 +41,12 @@ class CrewAIOrchestrator:
     ) -> None:
         self._conditional[src] = (router, dict(path_map))
 
-    def run(self, initial: dict, *, max_iterations: int = 5) -> dict:
+    def run(
+        self,
+        initial: PipelineState,
+        *,
+        max_iterations: int = 5,
+    ) -> PipelineState:
         try:
             from crewai import Agent, Task, Crew
         except ImportError:
@@ -47,7 +54,6 @@ class CrewAIOrchestrator:
                 "crewai not installed. Install with: pip install deep-reports-sdk[crewai]"
             )
 
-        # Build CrewAI agents for each node
         for name, fn in self._nodes.items():
             agent = Agent(
                 role=name.replace("_", " ").title(),
@@ -58,7 +64,6 @@ class CrewAIOrchestrator:
             )
             self._agents[name] = agent
 
-        # Build tasks with sequential dependencies
         task_map: dict[str, Any] = {}
         for src, dst in self._edges:
             if dst in self._agents:
@@ -76,4 +81,4 @@ class CrewAIOrchestrator:
         )
 
         result = crew.kickoff()
-        return {**dict(initial), "result": str(result)}
+        return PipelineState(**dict(initial), result=str(result))  # type: ignore

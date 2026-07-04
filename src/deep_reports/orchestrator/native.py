@@ -6,6 +6,8 @@ import logging
 from collections import Counter
 from typing import Callable
 
+from typing import Any
+
 from deep_reports.orchestrator.base import Orchestrator, PipelineState
 
 
@@ -31,7 +33,7 @@ class NativeOrchestrator(Orchestrator):
         # CRITICAL: dict-of-lists so multiple edges from same source all fire.
         self._edges: dict[str, list[str]] = {}
         # Conditional: source → (router_fn, path_map)
-        self._conditional: dict[str, tuple[Callable[[PipelineState], str], dict[str, str]]] = {}
+        self._conditional: dict[str, tuple[Callable[[dict[str, Any]], str], dict[str, str]]] = {}
         # Track entry point: first registered node, or first node with an edge from a non-existent source
         self._entry: str | None = None
 
@@ -52,7 +54,7 @@ class NativeOrchestrator(Orchestrator):
     def add_conditional_edge(
         self,
         src: str,
-        router: Callable[[PipelineState], str],
+        router: Callable[[dict[str, Any]], str],
         path_map: dict[str, str],
     ) -> None:
         self._conditional[src] = (router, dict(path_map))
@@ -77,7 +79,7 @@ class NativeOrchestrator(Orchestrator):
         edges_snapshot = {k: list(v) for k, v in self._edges.items()}
 
         try:
-            state = dict(initial)
+            state: dict[str, Any] = dict(initial)
             current = self._entry or next(iter(self._nodes), "END")
             executed = 0
             visit_log: list[str] = []  # for cycle detection

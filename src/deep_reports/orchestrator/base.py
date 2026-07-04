@@ -19,6 +19,7 @@ class PipelineState(TypedDict, total=False):
     evidence_issues: list[dict[str, Any]]
     quality_scores: dict[str, float] | None
     quality_summary: str | None
+    quality_overall: float | None
     cost_usd: float
     iteration: int
     checkpoint_dir: str | None  # set by facade for A6 checkpointing
@@ -53,7 +54,7 @@ class Orchestrator:
     def add_conditional_edge(
         self,
         src: str,
-        router: Callable[[PipelineState], str],
+        router: Callable[[dict[str, Any]], str],
         path_map: dict[str, str],
     ) -> None:
         """

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from deep_reports.agents import get_agent
 from deep_reports.agents.base import AgentContext
 from deep_reports.config import DeepReportsConfig
 from deep_reports.cost import BudgetGuard
 from deep_reports.orchestrator import get_orchestrator
+from deep_reports.orchestrator.base import PipelineState
 from deep_reports.providers import get_provider
 from deep_reports.security import validate_paths, get_allowed_roots
 
@@ -170,7 +171,7 @@ class DeepReport:
             pass
 
         # evidence_critic: conditional route
-        def evidence_router(state: dict) -> str:
+        def evidence_router(state: dict[str, Any]) -> str:
             issues = state.get("evidence_issues", [])
             blockers = sum(1 for i in issues if i.get("severity") == "blocker")
             if blockers >= BLOCKER_THRESHOLD:
@@ -192,7 +193,7 @@ class DeepReport:
 
         # quality_critic: conditional route
         if "quality_critic" in agent_names:
-            def quality_router(state: dict) -> str:
+            def quality_router(state: dict[str, Any]) -> str:
                 score = state.get("quality_overall")
                 if score is None:
                     return "ok"
@@ -214,7 +215,7 @@ class DeepReport:
 
         # refiner: conditional loop with iteration cap (only if refiner exists)
         if "refiner" in agent_names:
-            def refiner_router(state: dict) -> str:
+            def refiner_router(state: dict[str, Any]) -> str:
                 iteration = state.get("iteration", 1)
                 if iteration > MAX_REFINER_ITERATIONS:
                     return "done"
@@ -228,7 +229,7 @@ class DeepReport:
             rm_map["done"] = "END"
             self._orchestrator.add_conditional_edge("refiner", refiner_router, rm_map)
 
-    def generate(self) -> dict:
+    def generate(self) -> dict[str, Any]:
         """
         Run the full pipeline. Returns PipelineState with report_md, cost_usd, etc.
 
@@ -240,7 +241,7 @@ class DeepReport:
         agent_names = AGENT_SETS.get(self._config.agents, AGENT_SETS["all"])
         self._build_graph(agent_names)
 
-        initial = {
+        initial_state: PipelineState = {
             "question": self._question,
             "sources": self._validated_sources,
             "report_md": None,
@@ -253,15 +254,15 @@ class DeepReport:
         }
 
         logger.info(f"[deep-reports] Starting pipeline: {self._config.framework}/{self._config.provider}")
-        final = self._orchestrator.run(initial, max_iterations=20)
+        final = self._orchestrator.run(initial_state, max_iterations=20)
         final["cost_usd"] = self._budget.spent
 
         # F4: validate output_dir before writing
-        self._write_output(final)
+        self._write_output(dict(final))
 
-        return final
+        return dict(final)
 
-    def _write_output(self, state: dict) -> None:
+    def _write_output(self, state: dict[str, Any]) -> None:
         """Write report.md and cost log to output_dir.
 
         F4 fix: restrict output_dir to safe paths (under cwd or ~/.deep-reports/).

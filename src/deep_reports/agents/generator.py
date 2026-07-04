@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from typing import Callable
+
 from deep_reports.agents.base import AgentContext, AgentResult
 from deep_reports.security import get_allowed_roots, validate_paths
 
@@ -48,7 +50,7 @@ class ReportGenerator:
 
     def __init__(
         self,
-        source_reader: "callable[[list[str]], dict[str, str]] | None" = None,
+        source_reader: Callable[[list[str]], dict[str, str]] | None = None,
         allowed_roots: list[str] | None = None,
     ):
         """
@@ -65,7 +67,7 @@ class ReportGenerator:
         """Read files from disk with security validation at each I/O layer."""
         from pydantic import ValidationError
 
-        result = {}
+        result: dict[str, str] = {}
         try:
             validated = validate_paths(paths, allowed_roots=self._allowed_roots)
         except ValidationError as e:

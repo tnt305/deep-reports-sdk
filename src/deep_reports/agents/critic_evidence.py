@@ -112,7 +112,7 @@ class EvidenceCritic:
         from pathlib import Path
         from pydantic import ValidationError
 
-        result = {}
+        result: dict[str, str] = {}
         try:
             validated = validate_paths(sources, allowed_roots=self._allowed_roots)
         except ValidationError as e:
