@@ -10,8 +10,8 @@ pip install -e ".[all]"         # all extras (Anthropic, OpenAI, LangGraph, Crew
 ## Set API Key
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=your-api-key-here
+export OPENAI_API_KEY=your-api-key-here
 ```
 
 ## CLI Usage

@@ -47,7 +47,7 @@ pip install -e ".[dev]"
 
 ```bash
 # Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=your-api-key-here
 
 # Generate a report
 deep-reports generate \
@@ -119,19 +119,19 @@ critic-quality = "claude-haiku-4-5"
 ### Anthropic
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=your-api-key-here
 ```
 
 ### OpenAI
 
 ```bash
-export OPENAI_API_KEY=sk-...
+export OPENAI_API_KEY=your-api-key-here
 ```
 
 ### LiteLLM
 
 ```bash
-export LITELLM_API_KEY=...
+export LITELLM_API_KEY=your-api-key-here
 # Uses litellm.completion() — supports 50+ backends
 ```
 

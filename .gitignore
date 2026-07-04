@@ -24,6 +24,12 @@ reports/
 .pytest_cache/
 .mypy_cache/
 
+# Kilo state
+.kilo/
+
+# Codegraph index
+.codegraph/
+
 # Env
 .env
 .env.local

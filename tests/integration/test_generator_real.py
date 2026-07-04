@@ -15,7 +15,7 @@ from tests.conftest import DR_TEST_BUDGET_USD_DEFAULT
 
 def _is_anthropic_available():
     key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not key or key in ("nkq-4-6", "test-key", ""):
+    if not key or key in ("st-4-6", "test-key", ""):
         return False
     try:
         import anthropic
