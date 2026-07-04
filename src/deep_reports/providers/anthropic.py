@@ -6,8 +6,6 @@ import os
 import time
 from typing import Any
 
-import anthropic
-
 from deep_reports.cost import BudgetGuard
 from deep_reports.providers.base import ProviderResponse
 from deep_reports.providers import call_with_retry
@@ -20,6 +18,8 @@ class AnthropicProvider:
     default_model = "claude-sonnet-4-5"
 
     def __init__(self, api_key: str | None = None, model: str | None = None, timeout: float = 120.0):
+        import anthropic
+
         self._api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
         self._client = anthropic.Anthropic(api_key=self._api_key, timeout=timeout)
         self._async_client = anthropic.AsyncAnthropic(api_key=self._api_key, timeout=timeout)

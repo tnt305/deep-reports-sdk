@@ -6,8 +6,6 @@ import os
 import time
 from typing import Any
 
-from openai import OpenAI, AsyncOpenAI
-
 from deep_reports.cost import BudgetGuard
 from deep_reports.providers.base import ProviderResponse
 from deep_reports.providers import call_with_retry
@@ -20,6 +18,8 @@ class OpenAIProvider:
     default_model = "gpt-4o-mini"
 
     def __init__(self, api_key: str | None = None, model: str | None = None, timeout: float = 120.0):
+        from openai import OpenAI, AsyncOpenAI
+
         self._api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self._client = OpenAI(api_key=self._api_key, timeout=timeout)
         self._async_client = AsyncOpenAI(api_key=self._api_key, timeout=timeout)

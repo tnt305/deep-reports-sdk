@@ -13,6 +13,22 @@ from deep_reports.providers import (
 from deep_reports.providers.base import ProviderResponse
 
 
+def _has_anthropic() -> bool:
+    try:
+        import anthropic  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def _has_openai() -> bool:
+    try:
+        import openai  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def _make_resp(content: str, provider: str = "test") -> ProviderResponse:
     return ProviderResponse(
         content=content,
@@ -98,10 +114,12 @@ class TestFallbackProvider:
 
 
 class TestGetProvider:
+    @pytest.mark.skipif(not _has_anthropic(), reason="anthropic not installed")
     def test_get_anthropic_provider(self):
         p = get_provider("anthropic")
         assert p.name == "anthropic"
 
+    @pytest.mark.skipif(not _has_openai(), reason="openai not installed")
     def test_get_openai_provider(self, monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key-for-initialization")
         p = get_provider("openai")
@@ -111,6 +129,7 @@ class TestGetProvider:
         with pytest.raises(ValueError, match="Unknown provider"):
             get_provider("unknown-provider")
 
+    @pytest.mark.skipif(not _has_anthropic(), reason="anthropic not installed")
     def test_get_provider_with_model_override(self):
         p = get_provider("anthropic", model="claude-opus-4")
         assert p._default_model == "claude-opus-4"
