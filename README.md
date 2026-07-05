@@ -1,7 +1,14 @@
-# Deep Reports SDK
+<p align="center">
+  <img src="docs/banner.png" alt="Deep Reports SDK" width="100%">
+</p>
 
-Multi-provider, multi-orchestrator research report generator powered by LLM agents.  
-Analyze source code, answer research questions, and produce structured technical reports — all configurable via environment variables, TOML, or CLI.
+<p align="center">
+  <a href="docs/deep-reports-architecture.html"><b>Architecture diagram</b></a> ·
+  <a href="https://pypi.org/project/deep-reports/"><b>PyPI</b></a> ·
+  <a href="https://github.com/tnt305/deep-reports-sdk"><b>GitHub</b></a>
+</p>
+
+A code-analysis SDK powered by a four-agent LLM pipeline that turns a repository into a structured research report. Pluggable orchestrator backends (Native, LangGraph, CrewAI) and LLM providers (Anthropic, OpenAI, LiteLLM, Ollama).
 
 ## Features
 
