@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep Reports — Architecture</title>
+<script>
+  (function(){const s=localStorage.getItem('theme');const d=s?s==='dark':matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.classList.toggle('dark',d)})();
+</script>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface2: #F0EEE6;
+    --ink: #141413; --body: #3D3D3A; --muted: #87867F;
+    --line: #D1CFC5; --line-soft: #E6E3DA;
+    --purple:#8B6FAF; --purple-soft:rgba(139,111,175,0.10);
+    --blue:#5B7E96; --blue-soft:rgba(91,126,150,0.10);
+    --teal:#4E8D8C; --teal-soft:rgba(78,141,140,0.10);
+    --amber:#C9A45C; --amber-soft:rgba(201,164,92,0.12);
+    --coral:#D97757; --coral-soft:rgba(217,119,87,0.10);
+    --rust:#B04A3F; --rust-soft:rgba(176,74,63,0.10);
+    --serif: ui-serif, Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  html.dark {
+    --bg: #141413; --surface: #1F1F1D; --surface2: #2A2A28;
+    --ink: #FAF9F5; --body: #D1CFC5; --muted: #8F8D84;
+    --line: #3D3D3A; --line-soft: #2A2A28;
+    --purple:#A88DCD; --purple-soft:rgba(168,141,205,0.16);
+    --blue:#7FA3BC; --blue-soft:rgba(127,163,188,0.16);
+    --teal:#6EB3B2; --teal-soft:rgba(110,179,178,0.16);
+    --amber:#D4B36F; --amber-soft:rgba(212,179,111,0.16);
+    --coral:#E48A6E; --coral-soft:rgba(228,138,110,0.16);
+    --rust:#D97A6E; --rust-soft:rgba(217,122,110,0.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--body);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+  .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+  h1{font-family:var(--serif);font-weight:500;font-size:26px;color:var(--ink);letter-spacing:-0.01em}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase}
+  .top-spacer{flex:1}
+  #themeToggle{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:0.08em;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer}
+  #themeToggle:hover{color:var(--ink);border-color:var(--muted)}
+  .intro{font-size:14.5px;line-height:1.7;color:var(--body);max-width:680px;margin:18px 0 36px}
+  section{margin-bottom:52px}
+  h2{font-family:var(--serif);font-weight:500;font-size:19px;color:var(--ink);margin-bottom:4px}
+  .sec-sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:20px}
+
+  /* layer overview (compact) */
+  .layer-row{display:flex;gap:2px;margin-bottom:24px;flex-wrap:wrap}
+  .layer-chip{flex:1;min-width:150px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:12px}
+  .layer-chip b{display:block;font-size:13px;color:var(--ink);margin-bottom:2px}
+  .layer-chip span{color:var(--muted);font-size:11px}
+
+  /* orchestrator cards */
+  .orch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:800px){.orch-grid{grid-template-columns:1fr}}
+  .orch-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--surface)}
+  .orch-card.native{border-top:3px solid var(--muted)}
+  .orch-card.langgraph{border-top:3px solid var(--blue)}
+  .orch-card.crewai{border-top:3px solid var(--coral)}
+  .orch-card h3{font-size:14.5px;font-weight:600;color:var(--ink);margin-bottom:2px}
+  .orch-card .tagline{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:14px}
+  .orch-card ul{list-style:none}
+  .orch-card li{font-size:12.5px;padding:8px 10px;border-radius:6px;background:var(--surface2);margin-bottom:6px;line-height:1.5}
+  .orch-card li code{font-family:var(--mono);font-size:11px;color:var(--ink);background:none;padding:0}
+  .orch-card .caveat{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+
+  /* controls */
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .ctrl-label{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;width:100%;margin:10px 0 2px}
+  .ctrl-label:first-child{margin-top:0}
+  .mbtn{font-family:var(--mono);font-size:11.5px;letter-spacing:0.02em;padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s ease}
+  .mbtn:hover{color:var(--ink);border-color:var(--muted)}
+  .mbtn.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+  .stage-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-top:18px}
+  svg{flex:1;min-width:340px;max-width:100%;height:auto}
+  .info{width:270px;flex:none;padding:16px 18px;border-radius:10px;background:var(--surface2);font-size:13px;line-height:1.65;color:var(--body)}
+  .info h3{font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .info .agent-name{font-family:var(--serif);font-size:16px;color:var(--ink);margin-bottom:6px}
+  .info ul{margin-top:8px;padding-left:16px}
+  .info li{margin-bottom:3px;font-size:12px}
+  @media(max-width:760px){.info{width:100%}}
+
+  .node{cursor:pointer}
+  .node rect{stroke-width:1;transition:filter .15s ease}
+  .node:hover rect{filter:brightness(0.97)}
+  html.dark .node:hover rect{filter:brightness(1.15)}
+  .node.sel rect{stroke-width:2.5}
+  .node.dim{opacity:0.35}
+  .t{font-family:var(--sans);font-size:12.5px;font-weight:600;fill:var(--ink)}
+  .ts{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+  .edge{stroke:var(--line);stroke-width:1.5;fill:none}
+  .edge.on{stroke-width:2.5}
+  .edge.dim{opacity:0.3}
+  .arrow-head{fill:none}
+  .elabel{font-family:var(--mono);font-size:9px;fill:var(--muted)}
+  .elabel.on{font-weight:700}
+  .diamond polygon{fill:var(--surface2);stroke:var(--line);stroke-width:1}
+  .diamond.on polygon{stroke-width:2.5}
+  .diamond text{font-family:var(--mono);font-size:8.5px;fill:var(--muted);text-anchor:middle}
+  .tag{font-family:var(--mono);font-size:8.5px}
+  .tag rect{fill:var(--surface2);stroke:var(--line-soft);stroke-width:0.75;rx:9}
+  .tag text{text-anchor:middle}
+  @keyframes dash{to{stroke-dashoffset:-20}}
+  .flow{stroke-dasharray:6 7;animation:dash .7s linear infinite}
+
+  footer{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:0.03em;border-top:1px solid var(--line-soft);padding-top:18px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1>Deep Reports</h1>
+    <span class="sub">SDK architecture — detail view</span>
+    <span class="top-spacer"></span>
+    <button id="themeToggle">Dark</button>
+  </div>
+  <p class="intro">A code-analysis SDK that turns a repository into a structured research report. This view drills into the two layers with real logic: the pluggable orchestrator backend, and the four-agent pipeline it drives.</p>
+
+  <div class="layer-row">
+    <div class="layer-chip"><b>01 Entry</b><span>CLI / Python SDK</span></div>
+    <div class="layer-chip"><b>02 Config &amp; security</b><span>settings, path validation, budget guard</span></div>
+    <div class="layer-chip" style="border-color:var(--muted)"><b>03 Orchestrator ↓</b><span>native / langgraph / crewai</span></div>
+    <div class="layer-chip" style="border-color:var(--muted)"><b>04 Agent pipeline ↓</b><span>4 agents, routing, refine loop</span></div>
+    <div class="layer-chip"><b>05 Provider</b><span>anthropic / openai / litellm / ollama</span></div>
+  </div>
+
+  <section>
+    <h2>Orchestrator engine</h2>
+    <div class="sec-sub">Same pipeline, three different runtimes — pick per deployment</div>
+    <div class="orch-grid">
+
+      <div class="orch-card native">
+        <h3>NativeOrchestrator</h3>
+        <div class="tagline">in-memory · zero dependencies</div>
+        <ul>
+          <li><code>PipelineState</code> enum: <code>DRAFTED → CHECKED → SCORED → REFINED → DONE</code></li>
+          <li>Routing is a plain <code>if/elif</code> chain reading agent output fields directly</li>
+          <li>Refine loop is a <code>while iteration &lt;= 3</code> Python loop</li>
+        </ul>
+        <div class="caveat">No checkpointing — a crash mid-run loses pipeline state. Fastest to start, hardest to resume.</div>
+      </div>
+
+      <div class="orch-card langgraph">
+        <h3>LangGraphOrchestrator</h3>
+        <div class="tagline">StateGraph · conditional edges</div>
+        <ul>
+          <li>Each agent is a graph node; <code>TypedDict</code> state passed by reference between nodes</li>
+          <li><code>add_conditional_edges()</code> encodes the ≥3 blockers / score &lt;5 branches</li>
+          <li>Optional <code>checkpointer</code> persists state — resumable after failure</li>
+        </ul>
+        <div class="caveat">More setup, but you get replay, time-travel debugging, and durable execution for free.</div>
+      </div>
+
+      <div class="orch-card crewai">
+        <h3>CrewAIOrchestrator</h3>
+        <div class="tagline">Agent + Task · Crew</div>
+        <ul>
+          <li>Four <code>Agent</code> objects with role/goal/backstory; one <code>Task</code> per agent</li>
+          <li><code>Process.sequential</code> — refine loop is simulated by re-appending tasks</li>
+          <li>Delegation and tool-use come from CrewAI's own agent framework</li>
+        </ul>
+        <div class="caveat">Native conditional routing is limited — the ≥3 blockers branch is implemented as a custom callback, not a first-class edge.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Agent pipeline</h2>
+    <div class="sec-sub">Click an agent for detail, or drive the diagram with the controls</div>
+
+    <div class="controls" id="setChips">
+      <span class="ctrl-label">Agent set</span>
+      <button class="mbtn on" data-set="all">All (4 agents)</button>
+      <button class="mbtn" data-set="core">Core (generator + evidence)</button>
+      <button class="mbtn" data-set="minimal">Minimal (generator only)</button>
+    </div>
+    <div class="controls" id="modeChips">
+      <span class="ctrl-label">Trace</span>
+      <button class="mbtn on" data-mode="idle">Idle</button>
+      <button class="mbtn" data-mode="ok">Fast exit</button>
+      <button class="mbtn" data-mode="loop">Refiner loop (iteration 2 of 3)</button>
+    </div>
+
+    <div class="stage-wrap">
+      <svg viewBox="0 0 660 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" class="arrow-head" stroke="var(--line)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- Generator -->
+        <g class="node" data-agent="gen" onclick="selectAgent('gen')">
+          <rect x="16" y="40" width="112" height="50" rx="8" fill="var(--purple-soft)" stroke="var(--purple)"/>
+          <text class="t" x="72" y="63" text-anchor="middle">Generator</text>
+          <text class="ts" x="72" y="79" text-anchor="middle">Drafts report</text>
+        </g>
+
+        <path class="edge" id="e-gen-ev" d="M128 65 L156 65" marker-end="url(#arrow)"/>
+
+        <!-- Evidence critic -->
+        <g class="node" data-agent="ev" onclick="selectAgent('ev')">
+          <rect x="159" y="40" width="132" height="50" rx="8" fill="var(--blue-soft)" stroke="var(--blue)"/>
+          <text class="t" x="225" y="60" text-anchor="middle">Evidence critic</text>
+          <text class="ts" x="225" y="76" text-anchor="middle">6 issue types</text>
+        </g>
+
+        <!-- evidence issue tags -->
+        <g class="tag" fill="var(--muted)">
+          <rect x="159" y="100" width="66" height="16"/><text x="192" y="111">fabrication</text>
+          <rect x="229" y="100" width="62" height="16"/><text x="260" y="111">no_citation</text>
+          <rect x="159" y="120" width="80" height="16"/><text x="199" y="131">weak_evidence</text>
+          <rect x="243" y="120" width="48" height="16"/><text x="267" y="131">mismatch</text>
+        </g>
+
+        <path class="edge" id="e-ev-d1" d="M291 65 L316 65" marker-end="url(#arrow)"/>
+
+        <g class="diamond" id="d1">
+          <polygon points="330,45 352,65 330,85 308,65"/>
+          <text x="330" y="62">≥3</text>
+          <text x="330" y="72">blockers?</text>
+        </g>
+
+        <path class="edge" id="e-d1-qc" d="M352 65 L378 65" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d1-qc" x="365" y="55" text-anchor="middle">no</text>
+
+        <!-- Quality critic -->
+        <g class="node" data-agent="qc" onclick="selectAgent('qc')">
+          <rect x="381" y="40" width="132" height="50" rx="8" fill="var(--teal-soft)" stroke="var(--teal)"/>
+          <text class="t" x="447" y="60" text-anchor="middle">Quality critic</text>
+          <text class="ts" x="447" y="76" text-anchor="middle">8 dimensions</text>
+        </g>
+
+        <g class="tag" fill="var(--muted)">
+          <rect x="381" y="100" width="44" height="16"/><text x="403" y="111">depth</text>
+          <rect x="429" y="100" width="52" height="16"/><text x="455" y="111">breadth</text>
+          <rect x="485" y="100" width="52" height="16"/><text x="511" y="111">clarity</text>
+          <rect x="381" y="120" width="60" height="16"/><text x="411" y="131">evidence</text>
+          <rect x="445" y="120" width="44" height="16"/><text x="467" y="131">flow</text>
+          <rect x="493" y="120" width="42" height="16"/><text x="514" y="131">viz</text>
+        </g>
+
+        <path class="edge" id="e-qc-d2" d="M513 65 L538 65" marker-end="url(#arrow)"/>
+
+        <g class="diamond" id="d2">
+          <polygon points="552,45 574,65 552,85 530,65"/>
+          <text x="552" y="62">≥5.0</text>
+          <text x="552" y="72">score?</text>
+        </g>
+
+        <path class="edge" id="e-d2-end" d="M574 65 L602 65" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d2-end" x="588" y="55" text-anchor="middle">yes</text>
+
+        <g>
+          <rect x="605" y="40" width="40" height="50" rx="8" fill="var(--surface2)" stroke="var(--line)"/>
+          <text class="t" x="625" y="69" text-anchor="middle">End</text>
+        </g>
+
+        <!-- diamonds down to refiner -->
+        <path class="edge" id="e-d1-rf" d="M330 85 L330 250 L360 250" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d1-rf" x="330" y="180" text-anchor="middle">yes</text>
+
+        <path class="edge" id="e-d2-rf" d="M552 85 L552 250 L456 250" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d2-rf" x="552" y="180" text-anchor="middle">no</text>
+
+        <!-- Refiner -->
+        <g class="node" data-agent="rf" onclick="selectAgent('rf')">
+          <rect x="363" y="225" width="130" height="50" rx="8" fill="var(--amber-soft)" stroke="var(--amber)"/>
+          <text class="t" x="428" y="245" text-anchor="middle">Refiner</text>
+          <text class="ts" x="428" y="261" text-anchor="middle">Fixes flagged issues</text>
+        </g>
+
+        <path class="edge" id="e-rf-d3" d="M493 250 L516 250" marker-end="url(#arrow)"/>
+        <g class="diamond" id="d3">
+          <polygon points="530,230 552,250 530,270 508,250"/>
+          <text x="530" y="247">iter</text>
+          <text x="530" y="257">≤3?</text>
+        </g>
+
+        <path class="edge" id="e-d3-ev" d="M530 230 L530 148 L390 148 L390 92 L363 92" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d3-ev" x="475" y="140" text-anchor="middle">yes — loop back, iter+1</text>
+
+        <path class="edge" id="e-d3-end2" d="M552 250 L620 250 L620 92" marker-end="url(#arrow)"/>
+        <text class="elabel" id="l-d3-end2" x="600" y="180" text-anchor="middle">no — exit anyway</text>
+
+        <text class="ts" x="330" y="320" text-anchor="middle" fill="var(--muted)">iteration counter is shared pipeline state — carries across native / langgraph / crewai runtimes</text>
+
+        <!-- minimal / core bypass paths -->
+        <path class="edge" id="e-gen-end-minimal" d="M72 90 L72 380 L625 380 L625 90" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+        <path class="edge" id="e-ev-end-core" d="M225 90 L225 350 L625 350 L625 92" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+      </svg>
+
+      <div class="info">
+        <h3 id="infoLabel">Status</h3>
+        <div class="agent-name" id="agentName">Overview</div>
+        <p id="agentDesc">Four agents, three decision points, one bounded loop. The <code>agent_set</code> config controls how much of this actually runs — try the toggle above.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>framework: native / langgraph / crewai &middot; agent_set: all (4) / core (2) / minimal (1) &middot; provider: anthropic / openai / litellm / ollama &middot; max_cost_usd: 1.0</footer>
+</div>
+
+<script>
+(function(){
+  const allEdgeIds = ['e-gen-ev','e-ev-d1','e-d1-qc','e-qc-d2','e-d2-end','e-d1-rf','e-d2-rf','e-rf-d3','e-d3-ev','e-d3-end2','e-gen-end-minimal','e-ev-end-core'];
+  const allLabelIds = ['l-d1-qc','l-d2-end','l-d1-rf','l-d2-rf','l-d3-ev','l-d3-end2'];
+  const diamondIds = ['d1','d2','d3'];
+  const nodeEls = document.querySelectorAll('.node');
+  const infoLabel = document.getElementById('infoLabel');
+  const agentName = document.getElementById('agentName');
+  const agentDesc = document.getElementById('agentDesc');
+
+  const agentInfo = {
+    gen: { name: 'Generator', desc: 'Scans the source code and writes the first draft via the LLM provider: executive summary, core primitive, key patterns, data flow, strengths and limitations, evidence citations.' },
+    ev:  { name: 'Evidence critic', desc: 'Checks every claim against the actual source. Six issue types: fabrication, weak_evidence, contradicts_source, no_citation, wrong_citation, level_mismatch — each carries a severity. Three or more blocker-level issues route to the refiner.' },
+    qc:  { name: 'Quality critic', desc: 'Scores the draft on eight dimensions (1–10 each): depth, breadth, evidence, flow, visualization, comparability, actionability, clarity. Below 5.0 overall routes to the refiner; 5.0 or above ends the pipeline.' },
+    rf:  { name: 'Refiner', desc: 'Incorporates feedback from both critics, touching only flagged sections. Loops back to the evidence critic for re-validation. Iteration count is shared state — capped at 3, then the pipeline exits regardless of outcome.' }
+  };
+
+  function resetVisuals(){
+    nodeEls.forEach(n => { n.classList.remove('sel'); n.classList.remove('dim'); });
+    allEdgeIds.forEach(id => { const e = document.getElementById(id); e.classList.remove('on','flow','dim'); e.style.display=''; });
+    allLabelIds.forEach(id => { const l = document.getElementById(id); l.classList.remove('on'); l.style.display=''; });
+    diamondIds.forEach(id => document.getElementById(id).classList.remove('on'));
+    document.getElementById('e-gen-end-minimal').style.display='none';
+    document.getElementById('e-ev-end-core').style.display='none';
+  }
+
+  function selectAgent(a){
+    resetVisuals();
+    document.querySelector('.node[data-agent="'+a+'"]').classList.add('sel');
+    infoLabel.textContent = 'Selected';
+    agentName.textContent = agentInfo[a].name;
+    agentDesc.textContent = agentInfo[a].desc;
+    document.querySelectorAll('#modeChips .mbtn').forEach(b => b.classList.remove('on'));
+    document.querySelector('#modeChips .mbtn[data-mode="idle"]').classList.add('on');
+  }
+  window.selectAgent = selectAgent;
+
+  function activate(ids, labels, diamonds){
+    (ids||[]).forEach(id => { const e = document.getElementById(id); e.classList.add('on','flow'); });
+    (labels||[]).forEach(id => document.getElementById(id).classList.add('on'));
+    (diamonds||[]).forEach(id => document.getElementById(id).classList.add('on'));
+  }
+
+  let currentSet = 'all';
+  let currentMode = 'idle';
+
+  function applySet(){
+    resetVisuals();
+    if(currentSet === 'minimal'){
+      ['ev','qc','rf'].forEach(a => document.querySelector('.node[data-agent="'+a+'"]').classList.add('dim'));
+      ['e-gen-ev','e-ev-d1','e-d1-qc','e-qc-d2','e-d2-end','e-d1-rf','e-d2-rf','e-rf-d3','e-d3-ev','e-d3-end2'].forEach(id => document.getElementById(id).classList.add('dim'));
+      document.getElementById('e-gen-end-minimal').style.display='';
+      document.getElementById('e-gen-end-minimal').classList.add('on');
+      infoLabel.textContent='Agent set';
+      agentName.textContent='Minimal';
+      agentDesc.textContent='Only the generator runs. No evidence check, no quality score, no refine loop — fastest and cheapest, no correctness guarantees.';
+    } else if(currentSet === 'core'){
+      ['qc','rf'].forEach(a => document.querySelector('.node[data-agent="'+a+'"]').classList.add('dim'));
+      ['e-d1-qc','e-qc-d2','e-d2-end','e-d1-rf','e-d2-rf','e-rf-d3','e-d3-ev','e-d3-end2'].forEach(id => document.getElementById(id).classList.add('dim'));
+      document.getElementById('e-ev-end-core').style.display='';
+      document.getElementById('e-ev-end-core').classList.add('on');
+      infoLabel.textContent='Agent set';
+      agentName.textContent='Core';
+      agentDesc.textContent='Generator plus evidence critic. Claims get fact-checked against source, but there is no quality scoring and no automatic refinement.';
+    } else {
+      infoLabel.textContent='Agent set';
+      agentName.textContent='All (4 agents)';
+      agentDesc.textContent='Full pipeline: generator, evidence critic, quality critic, refiner — with the bounded refine loop active.';
+      applyMode();
+    }
+  }
+
+  function applyMode(){
+    if(currentSet !== 'all') return;
+    if(currentMode === 'idle'){
+      infoLabel.textContent = 'Status';
+      agentName.textContent = 'Overview';
+      agentDesc.textContent = 'Four agents, three decision points, one bounded loop. Click any box for detail.';
+    } else if(currentMode === 'ok'){
+      activate(['e-gen-ev','e-ev-d1','e-d1-qc','e-qc-d2','e-d2-end'], ['l-d1-qc','l-d2-end'], ['d1','d2']);
+      infoLabel.textContent = 'Trace';
+      agentName.textContent = 'Fast exit';
+      agentDesc.textContent = 'Generator drafts once. Evidence critic finds fewer than 3 blockers. Quality critic scores 5.0 or above. Pipeline ends after a single pass.';
+    } else if(currentMode === 'loop'){
+      activate(['e-gen-ev','e-ev-d1','e-d1-rf','e-rf-d3','e-d3-ev'], ['l-d1-rf','l-d3-ev'], ['d1','d3']);
+      infoLabel.textContent = 'Trace — iteration 2 of 3';
+      agentName.textContent = 'Refiner loop';
+      agentDesc.textContent = 'Evidence critic finds 3+ blockers. Refiner fixes them and loops back for re-validation. The iteration counter is shared pipeline state, capped at 3 — after that the pipeline exits regardless of score.';
+    }
+  }
+
+  document.querySelectorAll('#setChips .mbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#setChips .mbtn').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      currentSet = btn.dataset.set;
+      applySet();
+    });
+  });
+
+  document.querySelectorAll('#modeChips .mbtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#modeChips .mbtn').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      currentMode = btn.dataset.mode;
+      resetVisuals();
+      if(currentSet !== 'all'){
+        document.querySelectorAll('#setChips .mbtn').forEach(b => b.classList.remove('on'));
+        document.querySelector('#setChips .mbtn[data-set="all"]').classList.add('on');
+        currentSet = 'all';
+      }
+      applyMode();
+    });
+  });
+
+  const tt = document.getElementById('themeToggle');
+  tt.addEventListener('click', () => {
+    const d = document.documentElement;
+    d.classList.toggle('dark');
+    localStorage.setItem('theme', d.classList.contains('dark') ? 'dark' : 'light');
+    tt.textContent = d.classList.contains('dark') ? 'Light' : 'Dark';
+  });
+  tt.textContent = document.documentElement.classList.contains('dark') ? 'Light' : 'Dark';
+})();
+</script>
+</body>
+</html>
